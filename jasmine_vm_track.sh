@@ -18,6 +18,28 @@ done
 EOF
 )
 
+# ESXiがOFF状態の場合
+if [ -z "$vm_data" ]; then
+  echo "[$(date '+%F %T')] ESXiがOFF状態のため，全VMのカウントを +1 します" >> "$LOG_DIR/fallback.log"
+
+  # 全VMのOFFカウント +1
+  {
+    echo "VMID,Name,ConsecutiveOffCount"
+    tail -n +2 "$CSV_FILE" | while IFS=',' read -r vmid name count; do
+      if [[ "$count" =~ ^[0-9]+$ ]]; then
+        echo "$vmid,$name,$((count + 1))"
+      else
+        echo "$vmid,$name,1" 
+      fi
+    done
+  } > "$TMP_FILE"
+
+  mv "$TMP_FILE" "$CSV_FILE"
+  cp "$CSV_FILE" "$LOG_FILE"
+
+  exit 0
+fi
+
 # CSVがなければ作成
 if [ ! -f "$CSV_FILE" ]; then
   echo "VMID,Name,ConsecutiveOffCount" > "$CSV_FILE"
